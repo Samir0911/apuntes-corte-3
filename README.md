@@ -184,104 +184,6 @@ El sistema puede acumular hasta **240° de error angular** por backlash en una j
 
 ---
 
-# Gemelos Digitales con MATLAB y Quanser – Servo 3
-
----
-
-## ¿Qué es un Gemelo Digital?
-
-Un **gemelo digital** es una réplica virtual de un sistema físico que simula su comportamiento en tiempo real. Se utiliza para **análisis**, **diagnóstico**, **predicción de fallas** y **optimización del rendimiento** del sistema original.
-
-### Características:
-- Replica dinámica del sistema real
-- Actualización en tiempo real con datos sensoriales
-- Interacción directa con el sistema físico (control bidireccional)
-
----
-
-## MATLAB y Simulink para Gemelos Digitales
-
-**MATLAB** y **Simulink** permiten construir modelos físicos detallados que pueden actuar como gemelos digitales.
-
-### Herramientas clave:
-- **Simulink**: entorno de modelado y simulación en tiempo continuo y discreto.
-- **Simscape / Simscape Multibody**: para modelado físico.
-- **Stateflow**: para lógica de control.
-- **Instrument Control Toolbox**: para comunicación con hardware real.
-- **Digital Twin Toolbox (opcional)**: para aplicaciones industriales avanzadas.
-
----
-
-## Quanser Servo 3 y su Uso como Plataforma de Gemelo Digital
-
-El **Quanser SRV03 (Servo 3)** es una planta didáctica de control rotacional usada en laboratorios de ingeniería para diseño y prueba de sistemas de control.
-
-### Componentes del SRV03:
-- Motor DC con encoder óptico
-- Disco inercial acoplado
-- Amplificador de potencia
-- Carga variable
-- Sensores de posición
-
-### Aplicaciones con gemelos digitales:
-1. **Modelado del sistema SRV03** en Simulink usando ecuaciones dinámicas.
-2. **Validación del modelo** mediante comparación con datos reales.
-3. **Implementación del control** desde el gemelo digital.
-4. **Monitoreo en tiempo real** usando tarjetas de adquisición (DAQ) conectadas al hardware real.
-
----
-
-## Simulaciones en MATLAB y Simulink
-
-### Pasos típicos:
-
-1. **Modelado matemático del Servo 3**:
-   - Ecuaciones del motor DC:
-   - 
-     $$V(t) = L\frac{di(t)}{dt} + Ri(t) + K_b \omega(t)$$
-     
-     $$J\frac{d\omega(t)}{dt} + B\omega(t) = K_t i(t)$$
-
-2. **Implementación del modelo en Simulink**:
-   - Uso de bloques de:
-     - Ganancias
-     - Integradores
-     - Sumas
-     - Bloques de transferencia
-
-3. **Diseño del controlador** (P, PI o PID)
-
-4. **Comparación entre el modelo y la planta real** conectando el Servo 3 por medio de una tarjeta Quanser Q2-USB o similar.
-
-5. **Interacción en tiempo real**:
-   - El sistema físico y el gemelo digital se sincronizan
-   - Se puede predecir el comportamiento ante fallas o cambios de parámetros
-
----
-
-## Ventajas del uso de Gemelos Digitales en Ingeniería
-
-- Reducción de costos por pruebas físicas
-- Detección anticipada de fallos
-- Validación de diseños sin riesgos
-- Entrenamiento seguro de operadores
-- Desarrollo ágil de controladores
-
----
-
-## Ejemplo de Práctica con el Servo 3
-
-1. **Objetivo**: Diseñar un gemelo digital del SRV03 y validarlo con el sistema físico.
-2. **Pasos**:
-   - Crear el modelo dinámico en Simulink
-   - Calibrar parámetros (masa, fricción, constante del motor)
-   - Implementar control PID
-   - Comparar salida del modelo con medición real
-3. **Resultados esperados**:
-   - Error bajo entre gemelo digital y planta física
-   - Respuesta del controlador óptima en ambos entornos
-
----
 
 # Dimensionamiento y Cálculo de un Servomotor (Servo Sizing)
 
@@ -742,3 +644,413 @@ Controlador PI:
 - El método del relé ofrece una alternativa más segura y manipulable.
 - Implementar estrategias anti-windup es crucial en aplicaciones reales.
 
+---
+
+# Ejemplo paso a paso: Modelo en Espacio de Estados con ADRC
+
+## 1. Ecuación diferencial del sistema
+
+Dado un sistema mecánico masa-resorte-amortiguador con entrada $u(t)$ y salida $y(t)$:
+
+$$u(t) - K y(t) - B \dot{y}(t) = M \ddot{y}(t)$$
+
+Este modelo representa la Segunda Ley de Newton para un sistema masa-resorte-amortiguador.
+
+---
+
+## 2. Despeje de la aceleración
+
+Se despeja $\ddot{y}(t)$ (segunda derivada de la salida) para convertirlo en una forma apta para el espacio de estados:
+
+$$\ddot{y}(t) = \frac{u(t)}{M} - \frac{K}{M} y(t) - \frac{B}{M} \dot{y}(t)$$
+
+---
+
+## 3. Definición de variables de estado
+
+Se define:
+
+- $x_1 = y(t)$ (posición)
+- $x_2 = \dot{y}(t)$ (velocidad)
+
+Por lo tanto:
+
+- $\dot{x}_1 = x_2$
+- $\dot{x}_2 = \ddot{y}(t)$
+
+Entonces:
+
+$$\dot{x}_2 = \frac{u(t)}{M} - \frac{K}{M} x_1 - \frac{B}{M} x_2$$
+
+---
+
+## 4. Forma matricial del sistema
+
+Se reescribe el sistema como:
+
+### Ecuación de estado:
+
+$$\dot{x} = \begin{bmatrix} \dot{x}_1 \\ \dot{x}_2\end{bmatrix}=\begin{bmatrix}0 & 1 \\-\frac{K}{M} & -\frac{B}{M}\end{bmatrix}\begin{bmatrix}x_1 \\x_2\end{bmatrix}+\begin{bmatrix}0 \\\frac{1}{M}\end{bmatrix}u(t)$$
+
+### Ecuación de salida:
+
+$$y = \begin{bmatrix}1 & 0\end{bmatrix}\begin{bmatrix}x_1 \\x_2\end{bmatrix}+ 0 \cdot u(t)$$
+
+---
+
+## 5. Inclusión de perturbación generalizada en ADRC
+
+La ecuación dinámica incluye una perturbación $\varepsilon(t)$:
+
+$$
+\ddot{y} = \frac{u(t)}{M} - \frac{K}{M} y(t) - \frac{B}{M} \dot{y}(t)
+$$
+
+Se reescribe como:
+
+$$
+y^{(n)} = \mathbb{K} u + \varepsilon(t)
+$$
+
+Donde:
+
+- $\mathbb{K} = \frac{1}{M}$
+- $\varepsilon(t) = -\frac{K}{M} y(t) - \frac{B}{M} \dot{y}(t)$
+
+---
+
+## 6. Modelo extendido de estados (ESO - Observador de estados extendido)
+
+Se construye el modelo incluyendo la perturbación $\varepsilon$ y su derivada como nuevos estados:
+
+- $x_1 = y$
+- $x_2 = \dot{y}$
+- $x_3 = \varepsilon$
+- $x_4 = \dot{\varepsilon}$
+
+Entonces el sistema se modela como:
+
+$$
+\begin{aligned}
+\dot{x}_1 &= x_2 \\
+\dot{x}_2 &= \mathbb{K} u + x_3 \\
+\dot{x}_3 &= x_4 \\
+\dot{x}_4 &= \ddot{\varepsilon}
+\end{aligned}
+$$
+
+---
+
+## 7. Implementación del observador (estimación de estados)
+
+Se define el error de observación:
+
+$$
+e = x_1 - \hat{x}_1
+$$
+
+Donde $\hat{x}_i$ son las estimaciones del observador.
+
+El observador se plantea como:
+
+$$
+\begin{aligned}
+\dot{\hat{x}}_1 &= \hat{x}_2 + \lambda_3 e \\
+\dot{\hat{x}}_2 &= \mathbb{K} u + \hat{x}_3 + \lambda_2 e \\
+\dot{\hat{x}}_3 &= \hat{x}_4 + \lambda_1 e \\
+\dot{\hat{x}}_4 &= 0 + \lambda_0 e
+\end{aligned}
+$$
+
+---
+
+## 8. Ley de control del ADRC
+
+Una vez estimados los estados y la perturbación, se define la ley de control para el seguimiento de una trayectoria deseada $y^*$:
+
+$$u = (1 / K) * [ y^(n)* - k1*(ŷ̇ - ẏ*) - k0*(ŷ - y*) - ε̂ ]$$
+
+
+Donde:
+
+- $k_1$, $k_0$ son ganancias del controlador
+- $\hat{\varepsilon}$ es la perturbación estimada
+
+---
+
+## 9. Polinomio característico para el error de seguimiento
+
+Para garantizar estabilidad y buena respuesta dinámica, se define el siguiente polinomio de error:
+
+$$
+P_e(s) = s^2 + k_1 s + k_0
+$$
+
+Los valores de $k_1$ y $k_0$ se eligen para colocar los polos en el semiplano izquierdo (criterio de Hurwitz).
+
+---
+
+## 10. Parámetros numéricos del ejemplo
+
+Se dan:
+
+- $K = 0.5$
+- $B = 0.2$
+- $M = 0.5$
+- Entonces $\mathbb{K} = \frac{1}{0.5} = 2$
+
+---
+
+# Fórmulas del Método ADRC (Active Disturbance Rejection Control)
+
+## 1. Modelo Dinámico del Sistema
+
+### Ecuación diferencial base:
+$$
+u(t) - K y(t) - B \dot{y}(t) = M \ddot{y}(t)
+$$
+
+### Despeje de la aceleración:
+$$
+\ddot{y}(t) = \frac{u(t)}{M} - \frac{K}{M} y(t) - \frac{B}{M} \dot{y}(t)
+$$
+
+---
+
+## 2. Espacio de Estados
+
+### Definición de estados:
+$$
+x_1 = y \quad ; \quad x_2 = \dot{y}
+$$
+
+### Derivadas:
+$$
+\dot{x}_1 = x_2
+$$
+$$
+\dot{x}_2 = \frac{u(t)}{M} - \frac{K}{M} x_1 - \frac{B}{M} x_2
+$$
+
+### Forma matricial:
+$$
+\dot{X}(t) = A X(t) + B u(t)
+$$
+$$
+y(t) = C X(t) + D u(t)
+$$
+
+Donde:
+
+$$
+A =
+\begin{bmatrix}
+0 & 1 \\
+-\frac{K}{M} & -\frac{B}{M}
+\end{bmatrix}, \quad
+B =
+\begin{bmatrix}
+0 \\
+\frac{1}{M}
+\end{bmatrix}, \quad
+C =
+\begin{bmatrix}
+1 & 0
+\end{bmatrix}, \quad
+D = [0]
+$$
+
+---
+
+## 3. Modelo ADRC
+
+### Forma general:
+$$\ddot{y} = \mathbb{K} u + \varepsilon(t)$$
+
+Donde:
+$$\mathbb{K} = \frac{1}{M}$$
+
+$$\varepsilon(t) = -\frac{K}{M} y(t) - \frac{B}{M} \dot{y}(t)$$
+
+---
+
+## 4. Estados Extendidos (ESO)
+
+### Nuevos estados:
+$$
+x_3 = \varepsilon \quad ; \quad x_4 = \dot{\varepsilon}
+$$
+
+### Modelo extendido:
+$$
+\begin{aligned}
+\dot{x}_1 &= x_2 \\
+\dot{x}_2 &= \mathbb{K} u + x_3 \\
+\dot{x}_3 &= x_4 \\
+\dot{x}_4 &= \ddot{\varepsilon}
+\end{aligned}
+$$
+
+---
+
+## 5. Observador de Estados Extendidos
+
+### Error de observación:
+$$
+e = x_1 - \hat{x}_1
+$$
+
+### Ecuaciones del observador:
+$$
+\begin{aligned}
+\dot{\hat{x}}_1 &= \hat{x}_2 + \lambda_3 e \\
+\dot{\hat{x}}_2 &= \mathbb{K} u + \hat{x}_3 + \lambda_2 e \\
+\dot{\hat{x}}_3 &= \hat{x}_4 + \lambda_1 e \\
+\dot{\hat{x}}_4 &= 0 + \lambda_0 e
+\end{aligned}
+$$
+
+---
+
+## 6. Ley de Control ADRC
+
+### General:
+
+$$
+u = (1/𝕂) * [ y⁽ⁿ⁾* - k₁ (ŷ̇ - ẏ*) - k₀ (ŷ - y*) - ε̂ ]
+$$
+
+---
+
+## 7. Polinomio Característico del Error
+
+$$
+P_e(s) = s^2 + k_1 s + k_0
+$$
+
+---
+
+## 8. Condiciones Numéricas del Ejemplo
+
+$$K = 0.5, \quad B = 0.2, \quad M = 0.5$$
+
+$$\mathbb{K} = \frac{1}{M} = 2$$
+
+---
+
+## 9. Aproximación del Observador
+
+### Derivadas observadas:
+$$
+\dot{x}_1 = x_2 + \lambda_3 e_1 \\
+\dot{x}_2 = \mathbb{K} u + x_3 + \lambda_2 e_1 \\
+\dot{x}_3 = x_4 + \lambda_1 e_1 \\
+\dot{x}_4 = 0 + \lambda_0 e_1
+$$
+
+### Dinámica del error del observador:
+$$
+e^{(4)} + \lambda_3 \dddot{e}_1 + \lambda_2 \ddot{e}_1 + \lambda_1 \dot{e}_1 + \lambda_0 e_1 = \ddot{\varepsilon}
+$$
+
+
+---
+
+# Gemelos Digitales con MATLAB y Quanser – Servo 3
+
+---
+
+## ¿Qué es un Gemelo Digital?
+
+Un **gemelo digital** es una réplica virtual de un sistema físico que simula su comportamiento en tiempo real. Se utiliza para **análisis**, **diagnóstico**, **predicción de fallas** y **optimización del rendimiento** del sistema original.
+
+### Características:
+- Replica dinámica del sistema real
+- Actualización en tiempo real con datos sensoriales
+- Interacción directa con el sistema físico (control bidireccional)
+
+---
+
+## MATLAB y Simulink para Gemelos Digitales
+
+**MATLAB** y **Simulink** permiten construir modelos físicos detallados que pueden actuar como gemelos digitales.
+
+### Herramientas clave:
+- **Simulink**: entorno de modelado y simulación en tiempo continuo y discreto.
+- **Simscape / Simscape Multibody**: para modelado físico.
+- **Stateflow**: para lógica de control.
+- **Instrument Control Toolbox**: para comunicación con hardware real.
+- **Digital Twin Toolbox (opcional)**: para aplicaciones industriales avanzadas.
+
+---
+
+## Quanser Servo 3 y su Uso como Plataforma de Gemelo Digital
+
+El **Quanser SRV03 (Servo 3)** es una planta didáctica de control rotacional usada en laboratorios de ingeniería para diseño y prueba de sistemas de control.
+
+### Componentes del SRV03:
+- Motor DC con encoder óptico
+- Disco inercial acoplado
+- Amplificador de potencia
+- Carga variable
+- Sensores de posición
+
+### Aplicaciones con gemelos digitales:
+1. **Modelado del sistema SRV03** en Simulink usando ecuaciones dinámicas.
+2. **Validación del modelo** mediante comparación con datos reales.
+3. **Implementación del control** desde el gemelo digital.
+4. **Monitoreo en tiempo real** usando tarjetas de adquisición (DAQ) conectadas al hardware real.
+
+---
+
+## Simulaciones en MATLAB y Simulink
+
+### Pasos típicos:
+
+1. **Modelado matemático del Servo 3**:
+   - Ecuaciones del motor DC:
+   - 
+     $$V(t) = L\frac{di(t)}{dt} + Ri(t) + K_b \omega(t)$$
+     
+     $$J\frac{d\omega(t)}{dt} + B\omega(t) = K_t i(t)$$
+
+2. **Implementación del modelo en Simulink**:
+   - Uso de bloques de:
+     - Ganancias
+     - Integradores
+     - Sumas
+     - Bloques de transferencia
+
+3. **Diseño del controlador** (P, PI o PID)
+
+4. **Comparación entre el modelo y la planta real** conectando el Servo 3 por medio de una tarjeta Quanser Q2-USB o similar.
+
+5. **Interacción en tiempo real**:
+   - El sistema físico y el gemelo digital se sincronizan
+   - Se puede predecir el comportamiento ante fallas o cambios de parámetros
+
+---
+
+## Ventajas del uso de Gemelos Digitales en Ingeniería
+
+- Reducción de costos por pruebas físicas
+- Detección anticipada de fallos
+- Validación de diseños sin riesgos
+- Entrenamiento seguro de operadores
+- Desarrollo ágil de controladores
+
+---
+
+## Ejemplo de Práctica con el Servo 3
+
+1. **Objetivo**: Diseñar un gemelo digital del SRV03 y validarlo con el sistema físico.
+2. **Pasos**:
+   - Crear el modelo dinámico en Simulink
+   - Calibrar parámetros (masa, fricción, constante del motor)
+   - Implementar control PID
+   - Comparar salida del modelo con medición real
+3. **Resultados esperados**:
+   - Error bajo entre gemelo digital y planta física
+   - Respuesta del controlador óptima en ambos entornos
+
+---
