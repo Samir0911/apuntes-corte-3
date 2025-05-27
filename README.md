@@ -283,4 +283,462 @@ El **Quanser SRV03 (Servo 3)** es una planta didáctica de control rotacional us
 
 ---
 
+# Dimensionamiento y Cálculo de un Servomotor (Servo Sizing)
+
+---
+
+## Pasos a seguir para el cálculo
+
+En el ejemplo del video, se dimensiona el accionamiento de un **repartidor de pasada** para la fabricación de bobinas.
+
+### 1. Modelar el sistema mecánico del eje
+- Se escoge el modelo más cercano al sistema real en el software de cálculo.
+- Se introducen datos físicos y dinámicos.
+
+### 2. Definir el perfil de movimiento
+- El repartidor se mueve de **0 a 42 mm y regresa a 0 mm**, sincronizado con el giro del núcleo.
+- Por cada vuelta del núcleo, el carro del repartidor se desplaza **1 mm** (ancho del hilo).
+- Cálculo del número de vueltas necesarias:
+
+  $$\frac{42\ \text{mm (ancho núcleo)}}{1\ \text{mm (hilo/vuelta)}} = 42\ \text{vueltas}$$
+
+- A una velocidad de:
+
+  $$10{,}000\ \text{RPM} = \frac{10{,}000}{60} \approx 166.66\ \text{rev/s}$$
+
+- El tiempo disponible para hacer un ciclo (ida y regreso):
+
+  $$\frac{1\ \text{s}}{166.66 / 42} \approx 0.504\ \text{segundos} = 504\ \text{ms}$$
+
+### 3. Calcular
+- Se define la gama del producto (motor, reductor, tensión de red, etc.).
+- Se calcula el par y la inercia total del sistema.
+
+### 4. Optimizar
+- Se obtienen múltiples resultados y se selecciona la opción más eficiente.
+- Se ajustan parámetros como:
+  - Relación de reducción
+  - Paso del husillo
+  - Diámetro de poleas
+  - Perfil de movimiento
+
+---
+
+## Optimización del Accionamiento
+
+Para **optimizar el par eficaz del motor**, se analizan:
+
+- **Relaciones de reducción**:
+  
+  Minimizar el torque modificando la relación de engranajes. Por ejemplo:
+
+  - Con $\( i = 1.2 \)$: par alto.
+  - Con $\( i = 5 \)$: par reducido al mínimo.
+
+- **Paso del husillo**:
+  
+  - Un paso mayor (ej. 5 mm) aumenta el par requerido.
+  - Un paso menor (ej. 2 mm) reduce el par.
+
+- **Perfil de aceleración y jerk**:
+  
+  - El "jerk" (derivada de la aceleración) impacta negativamente en la mecánica si no se suaviza el perfil.
+  - Optimizar curvas de posición, velocidad y aceleración para minimizarlo.
+
+---
+
+## Herramientas de Cálculo - Motion Sizer
+
+- Calcular manualmente el sistema completo puede ser tedioso y propenso a errores.
+- Existen softwares como **Motion Sizer** que permiten:
+  - Ingresar parámetros físicos y cinemáticos.
+  - Acceder a bases de datos de componentes (motores, reductores).
+  - Obtener resultados optimizados automáticamente.
+  - Generar listas de referencias para compras.
+
+---
+
+## Sistemas Inestables
+
+En algunos casos, los sistemas inestables pueden ser identificados en **lazo abierto**, aunque con ciertas limitaciones. Un ejemplo común es un **motor inestable en posición**. En estos casos:
+
+- El modelo obtenido es una **aproximación**.
+- El **controlador** debe asumir el margen de error.
+
+---
+
+## Modelado en Lazo Abierto
+
+### Modelo: Primer orden + tiempo muerto + factor integrante
+
+Para este tipo de sistemas, se utiliza el siguiente modelo de función de transferencia:
+
+$$G = \frac{K e^{-s t_o}}{(\tau s + 1)s}$$
+
+### Metodología
+
+1. Captura de la **curva de reacción** en lazo abierto.
+2. Derivación de la curva (numéricamente o por simulación).
+3. Ajuste del resultado a un sistema de primer orden más tiempo muerto (FOPDTI).
+
+---
+
+## Aproximación FOPDTI - Ejemplo
+
+- Se deriva la curva de reacción.
+- Se aproxima con un sistema de primer orden más tiempo muerto.
+
+Datos del método de Smith:
+
+$$t_2 = 1.9 \quad t_1 = 1.24$$
+
+---
+
+## Aproximación IPDT
+
+Este modelo considera un **factor integrante** más un **tiempo muerto**:
+
+$$G = \frac{K e^{-s t_o}}{s}$$
+
+### Metodología
+
+1. Captura de la curva de reacción en lazo abierto.
+2. Ubicación de puntos característicos de la curva.
+3. Cálculo de los parámetros $K$ y $t_o$.
+
+Fórmulas:
+
+$$K = \frac{O_2 - O_1}{(I_2 - I_1)(T_3 - T_2)}$$
+
+$$t_o = T_2 - T_1$$
+
+---
+
+## Ejemplo Práctico
+
+Valores:
+
+- $T_3 = 5.86$
+- $T_2 = 2.19$
+- $T_1 = 1.02$
+- $O_2 = 3.47$
+- $O_1 = 0$
+- $I_2 - I_1 = 1$
+
+Aplicando las fórmulas:
+
+$$K = \frac{3.47 - 0}{(1)(5.86 - 2.19)} = 0.94$$
+
+$$t_o = 2.19 - 1.02 = 1.17$$
+
+Función de transferencia estimada:
+
+$$G = \frac{0.94 e^{-s 1.17}}{s}$$
+
+---
+
+## Ejercicio 1: Método IPDT
+
+Se ha obtenido la siguiente información de una curva de reacción de un sistema:
+
+- $T_3 = 6.0 \ \text{s}$
+- $T_2 = 2.5 \ \text{s}$
+- $T_1 = 1.0 \ \text{s}$
+- $O_2 = 4.0$
+- $O_1 = 0$
+- $I_2 - I_1 = 1$
+
+Determina la función de transferencia aproximada del sistema.
+
+### Solución:
+
+Calculamos $K$:
+
+$$K = \frac{O_2 - O_1}{(I_2 - I_1)(T_3 - T_2)} = \frac{4.0 - 0}{(1)(6.0 - 2.5)} = \frac{4.0}{3.5} = 1.14$$
+
+Calculamos $t_o$:
+
+$$t_o = T_2 - T_1 = 2.5 - 1.0 = 1.5$$
+
+Función de transferencia aproximada:
+
+$$G(s) = \frac{1.14 \cdot e^{-s 1.5}}{s}$$
+
+---
+
+## Ejercicio 2: Método FOPDTI
+
+Se registra una curva de reacción de un sistema inestable. Se aproxima por derivación a un sistema de primer orden más tiempo muerto. Se obtienen los siguientes parámetros:
+
+- $K = 2$
+- $\tau = 4$
+- $t_o = 1.2$
+
+Encuentra la función de transferencia aproximada.
+
+### Solución:
+
+Usamos el modelo FOPDTI:
+
+$$G(s) = \frac{K \cdot e^{-s t_o}}{(\tau s + 1)s}$$
+
+Sustituimos:
+
+$$G(s) = \frac{2 \cdot e^{-s 1.2}}{(4s + 1)s}$$
+
+
+## Conclusiones
+
+- Es posible obtener una función de transferencia aproximada para sistemas de orden superior.
+- Los métodos basados en la curva de reacción en lazo abierto presentan limitaciones.
+- En la industria son comunes los sistemas sobreamortiguados.
+- Con los métodos de dos puntos se pueden modelar incluso sistemas de segundo orden.
+
+---
+
+#Sintonización de Controladores PID en Lazo Cerrado
+
+## Fundamento General
+
+La sintonización PID en lazo cerrado consiste en hacer pruebas directamente sobre el sistema en operación, sin romper el lazo de control. El objetivo es ajustar los parámetros del controlador PID (Proporcional, Integral, Derivativo) observando la respuesta del sistema.
+
+A partir de la respuesta, se identifican características clave como la frecuencia de oscilación y la ganancia crítica, que permiten calcular los parámetros del PID.
+
+---
+
+## Método de Ziegler-Nichols (Ciclo Último)
+
+Este método busca obtener los parámetros PID a partir de una oscilación sostenida en la salida del sistema.
+
+### Pasos:
+
+1. Poner las ganancias del controlador PID en cero.
+2. Aumentar $K_p$ (proporcional) hasta lograr una **oscilación sostenida y estable**.
+3. Medir el **período de oscilación** ($P_u$).
+4. Registrar la **ganancia proporcional** que causó dicha oscilación ($K_u$).
+
+---
+
+## Ejemplo Analítico
+
+Se da un sistema con función de transferencia:
+
+$$G = \frac{1}{s^3 + 6s^2 + 11s + 6}$$
+
+La función de transferencia del sistema en lazo cerrado es:
+
+$$G_o = \frac{K_p \cdot \frac{1}{s^3 + 6s^2 + 11s + 6}}{1 + K_p \cdot \frac{1}{s^3 + 6s^2 + 11s + 6}} = \frac{K_p}{s^3 + 6s^2 + 11s + 6 + K_p}$$
+
+Se analiza para $s = j\omega$ y se igualan parte real e imaginaria a cero para encontrar $K_u$ y $P_u$.
+
+### Parte imaginaria:
+
+$$-\omega^2 + 11 = 0 \Rightarrow \omega = \sqrt{11}$$
+
+$$P_u = \frac{2\pi}{\omega} = \frac{2\pi}{\sqrt{11}} \approx 1.894 \ \text{segundos}$$
+
+### Parte real:
+
+$$-6\omega^2 + 6 + K_p = 0 \Rightarrow K_p = 6\omega^2 - 6$$
+
+Sustituyendo $\omega = \sqrt{11}$:
+
+$$K_p = 6 \cdot 11 - 6 = 60 = K_u$$
+
+---
+
+## Fórmulas de Sintonización (Ziegler-Nichols)
+
+| Tipo | $K_p$       | $T_i$             | $T_d$           |
+|------|-------------|-------------------|------------------|
+| P    | $0.5 K_u$   | —                 | —                |
+| PI   | $0.45 K_u$  | $\frac{P_u}{1.2}$ | —                |
+| PID  | $0.6 K_u$   | $\frac{P_u}{2}$   | $\frac{P_u}{8}$  |
+
+Tabla 1. Fórmulas de Sintonización (Ziegler-Nichols).
+
+
+---
+
+## Método del Relé
+
+Este método mejora el de Ziegler-Nichols evitando saturar el sistema. Consiste en usar un **relé con histéresis** como controlador para inducir una oscilación controlada.
+
+### Pasos:
+
+1. (Opcional) Medir el tiempo para alcanzar el régimen estacionario en lazo abierto.
+2. Cerrar el lazo usando un relé con histéresis.
+3. Medir el **período de oscilación** ($P_u$) y la **amplitud** ($A_u$).
+4. Calcular la **ganancia crítica** $K_c$:
+
+$$K_c = \frac{4d}{\pi (A_u^2 - \varepsilon^2)}$$
+
+---
+
+## ¿Qué es el Método del Relé?
+
+El método del relé es una técnica de sintonización PID **empírica** y **segura**, diseñada para obtener los parámetros del controlador sin necesidad de alcanzar condiciones de operación peligrosas o inestables, como ocurre con el método de Ziegler-Nichols.
+
+Este método utiliza un **relé (controlador ON-OFF)** en lugar de una ganancia proporcional variable, generando una **oscilación sostenida** en la salida del sistema. A partir de esta respuesta se extraen parámetros útiles para el diseño del controlador PID.
+
+---
+
+## Objetivos del Método
+
+- Obtener la **ganancia crítica** ($K_c$) de manera segura.
+- Medir el **período de oscilación** ($P_u$).
+- Evitar saturaciones o inestabilidades excesivas.
+- Permitir la manipulación de la señal durante la prueba.
+
+---
+
+## Procedimiento
+
+1. (Opcional) Verifica el tiempo necesario para que el sistema alcance el estado estacionario en lazo abierto.
+2. Cierra el lazo e implementa un **controlador tipo relé con histéresis**.
+3. Registra la respuesta del sistema: una **oscilación sostenida**.
+4. Mide:
+   - **Amplitud de la salida** ($A_u$)
+   - **Histéresis del relé** ($\varepsilon$)
+   - **Altura del relé** ($d$)
+   - **Período de oscilación** ($P_u$)
+
+---
+
+## Cálculo de la Ganancia Crítica $K_c$
+
+Se utiliza la siguiente fórmula para calcular la **ganancia equivalente** al obtener la oscilación con el relé:
+
+$$K_c = \frac{4d}{\pi (A_u^2 - \varepsilon^2)}$$
+
+Donde:
+
+- $d$: altura del relé (amplitud de la señal de control ON/OFF)
+- $A_u$: amplitud de oscilación de la salida
+- $\varepsilon$: histéresis
+- $\pi$: constante matemática (≈ 3.1416)
+
+---
+
+## Sintonización del Controlador
+
+Con los valores de $K_c$ y $P_u$, se pueden usar **fórmulas adaptadas** similares a Ziegler-Nichols para obtener los parámetros del controlador. Ejemplo para un controlador **PI**:
+
+- $$K_p = \frac{5K_c}{6}$$
+- $$T_i = \frac{P_u}{5}$$
+
+> Para controladores PID, se pueden usar fórmulas ampliadas según el diseño o la literatura utilizada.
+
+---
+
+## Ventajas del Método del Relé
+
+- No se requiere llevar el sistema a una condición de oscilación por ganancia elevada.
+- Permite observar y controlar la respuesta durante la prueba.
+- Mayor seguridad para el sistema real.
+- Es compatible con implementaciones en microcontroladores o sistemas digitales.
+
+---
+
+## Ejemplo Práctico
+
+Se utiliza un relé de $d = 1.2$, se obtiene una oscilación de $A_u = 2.5$, con histéresis $\varepsilon = 0.3$, y un período de $P_u = 2.8$ s.
+
+Se calcula:
+
+$$K_c = \frac{4 \cdot 1.2}{\pi (2.5^2 - 0.3^2)} = \frac{4.8}{\pi (6.25 - 0.09)} = \frac{4.8}{\pi (6.16)} \approx \frac{4.8}{19.35} \approx 0.248$$
+
+Luego, si se desea un controlador PI:
+
+$$K_p = \frac{5 \cdot 0.248}{6} = 0.206 \quad ; \quad T_i = \frac{2.8}{5} = 0.56$$
+
+
+---
+
+## Fenómeno Wind-Up
+
+Cuando el actuador alcanza sus límites, la acción integral del PID puede seguir acumulando error, lo que genera tiempos de respuesta excesivos y riesgo de saturación prolongada.
+
+### Soluciones Anti-Windup
+
+1. **Saturación de la acción integral**: Detiene la acumulación al alcanzar el límite.
+2. **Integración condicional**: Pausa la integración cuando la salida se satura.
+3. **Re-cálculo con seguimiento**: Se estima el comportamiento del actuador y se modula suavemente la acción integral.
+
+Fórmula del tiempo de transición anti-windup:
+
+$$T_t = T_i T_d$$
+
+---
+
+# Ejercicios: Sintonización PID en Lazo Cerrado
+
+## Ejercicio 1: Método de Ziegler-Nichols (Ciclo Último)
+
+Se realiza una prueba en lazo cerrado a un sistema. Se incrementa $K_p$ hasta que la salida presenta una **oscilación sostenida**. Se obtienen los siguientes datos:
+
+- Ganancia última: $K_u = 48$
+- Período último: $P_u = 2.5$ segundos
+
+Determina los parámetros del controlador **PID** usando la tabla de Ziegler-Nichols.
+
+### Solución:
+
+Usamos las fórmulas del método:
+
+- $$K_p = 0.6 K_u = 0.6 \cdot 48 = 28.8$$
+- $$T_i = \frac{P_u}{2} = \frac{2.5}{2} = 1.25$$
+- $$T_d = \frac{P_u}{8} = \frac{2.5}{8} = 0.3125$$
+
+**Resultado**:
+
+Controlador PID:
+- $K_p = 28.8$
+- $T_i = 1.25$
+- $T_d = 0.3125$
+
+---
+
+## Ejercicio 2: Método del Relé
+
+Durante una prueba con **controlador tipo relé con histéresis**, se obtienen los siguientes datos:
+
+- Altura de histéresis: $d = 1.5$
+- Amplitud de oscilación: $A_u = 2.0$
+- Histéresis: $\varepsilon = 0.3$
+- Período de oscilación: $P_u = 3.2$ segundos
+
+Determina la ganancia crítica $K_c$ y calcula los parámetros del **controlador PI**.
+
+### Solución:
+
+#### Paso 1: Calcular la ganancia crítica $K_c$
+
+Usamos la fórmula:
+
+$$
+K_c = \frac{4d}{\pi (A_u^2 - \varepsilon^2)} = \frac{4 \cdot 1.5}{\pi (2.0^2 - 0.3^2)} = \frac{6}{\pi (4 - 0.09)} = \frac{6}{\pi (3.91)} \approx \frac{6}{12.29} \approx 0.488
+$$
+
+#### Paso 2: Calcular parámetros del PI
+
+Según el método del relé:
+
+- $$K_p = \frac{5 K_c}{6} = \frac{5 \cdot 0.488}{6} \approx 0.407$$
+- $$T_i = \frac{P_u}{5} = \frac{3.2}{5} = 0.64$$
+
+**Resultado**:
+
+Controlador PI:
+- $K_p \approx 0.407$
+- $T_i = 0.64$
+
+
+
+## Conclusiones
+
+- Las pruebas en lazo cerrado permiten diseñar controladores PID directamente sobre el sistema.
+- El método de Ziegler-Nichols, aunque antiguo, sigue siendo útil en la industria.
+- El método del relé ofrece una alternativa más segura y manipulable.
+- Implementar estrategias anti-windup es crucial en aplicaciones reales.
 
