@@ -1054,3 +1054,160 @@ El **Quanser SRV03 (Servo 3)** es una planta didáctica de control rotacional us
    - Respuesta del controlador óptima en ambos entornos
 
 ---
+
+# Guía de conexión y uso del Quanser Qube-Servo 3 con MATLAB y QUARC
+
+## Requisitos previos
+
+Antes de comenzar asegúrate de tener:
+
+1. MATLAB y Simulink instalados.
+2. QUARC para Simulink (toolbox de Quanser) instalado.
+3. Qube-Servo 3, su fuente de alimentación y el cable USB-C.
+
+## Componentes del sistema
+
+- Qube-Servo 3
+- Módulo de disco de inercia o péndulo rotatorio
+- Fuente de poder 24 V DC, 2.71 A (TRUMPower ATS065T-P240)
+- Cable USB-A a USB-C
+
+## Pasos para conexión física del sistema
+
+1. Conecta el cable USB-C desde la parte trasera del Qube-Servo 3 a tu PC.
+2. Conecta la fuente de poder y enciende el Qube-Servo con el interruptor trasero.
+3. Verifica:
+   - La tira LED superior se enciende en rojo.
+   - El LED junto al conector USB-C se ilumina en verde.
+4. Acopla el módulo que deseas usar (disco de inercia o péndulo) al motor.
+5. Si usas el péndulo, conecta el cable del encoder al conector Encoder 1.
+
+## Primer modelo en Simulink con QUARC
+
+1. Abre MATLAB y crea un nuevo modelo en Simulink.
+2. Agrega y conecta los siguientes bloques:
+   - HIL Read Encoder Timebase (canal 0)
+   - Gain (para convertir pulsos a ángulo)
+   - Display
+   - Manual Switch
+   - Pulse Generator
+   - Constant
+   - HIL Write Analog (canal 0)
+
+   Diagrama de ejemplo:
+
+   HIL Read Encoder Timebase --> Gain --> Display
+                                             |
+                                           Switch --> HIL Write Analog
+   Constant -----> Pulse Generator --------|
+
+3. Configura los bloques HIL para usar el Board Type: `q8_usb` o el que corresponda al modelo.
+
+## Lanzar entorno gráfico interactivo
+
+1. En la ventana de comandos de MATLAB, digita:
+
+```matlab
+qLabs.setup
+```
+
+2. Luego ejecuta:
+
+```matlab
+qLabs.launch
+```
+
+3. Se abrirá una ventana con varias plantas virtuales (Gemelos Digitales).
+4. Selecciona "Qube 2 - DC Motor" para comenzar.
+5. La ventana te mostrará un gemelo del Qube, sincronizado con tu simulación.
+
+## Notas útiles
+
+- El encoder tiene una resolución de 2048 cuentas/rev en modo cuadratura.
+- El sistema tiene un rango de voltaje de salida recomendado de ±10 V.
+- Si el motor no responde a señales pequeñas, usa la compensación de zona muerta:
+
+```matlab
+set_param('nombre_del_modelo','BoardOptions','deadband_compensation=0.65')
+```
+
+- El sistema desactiva el motor si detecta una obstrucción (protección por stall).
+
+## Precauciones
+
+- No usar voltajes superiores a los recomendados.
+- No dejar que el péndulo gire libremente sin supervisión.
+- No desconectar cables mientras el sistema esté encendido.
+
+## Configuración del Modelo
+
+1. Abre MATLAB y crea un modelo en blanco en Simulink.
+2. Abre el Simulink Library Browser.
+3. En el navegador de bibliotecas, expande:
+   `QUARC Targets > Data Acquisition > Generic > Configuration`
+4. Arrastra el bloque **HIL Initialize** al modelo.
+5. Haz doble clic en el bloque HIL Initialize para configurarlo.
+6. En la pestaña **Main**, establece:
+   - Board type: `q8_usb` o `qube_servo2_usb`
+   - Board identifier: `@tcpip://localhost:18020`
+   - Marca la casilla **Active during normal simulation**
+   - Haz clic en OK
+
+7. Verifica que el Qube-Servo 2 esté abierto en Quanser Interactive Labs.
+
+## Ejecutar el Modelo
+
+8. Ejecuta el controlador QUARC usando el botón **Run** en Simulink.
+9. Si no hay errores, la tira LED del Qube-Servo 2 se pondrá verde.
+10. El botón **Run** cambiará a **Stop**. Haz clic en él para detener el modelo.
+
+## Acelerando el Motor DC
+
+11. Añade el bloque **HIL Read Encoder Timebase** desde:
+    `QUARC Targets > Data Acquisition > Generic > Timebases`
+
+12. Conéctalo al modelo.
+
+13. Haz doble clic para configurar:
+    - Main tab: Marca **Active during normal simulation**
+    - Advanced tab: Establece **Buffer overflow mode** en `Synchronize`
+
+14. Conecta el bloque de lectura con el bloque **HIL Write Analog** (control del motor).
+
+15. Añade el bloque **HIL Write Analog** desde:
+    `QUARC Targets > Data Acquisition > Generic > Immediate I/O`
+
+16. Configúralo marcando **Active during normal simulation**.
+
+17. Conecta el bloque **Constant** al **HIL Write Analog**, como en la figura del modelo.
+
+> Nota: El subsistema "Stall Detection" detiene el modelo si el motor está bloqueado por más de 20 segundos con voltaje > 4.5V para evitar sobrecalentamiento.
+
+## Lectura del Encoder
+
+18. Ejecuta nuevamente el modelo QUARC.
+19. Establece un bloque **Constant** con valor `0.5` para aplicar 0.5V al motor.
+20. Observa la dirección de rotación del disco y verifica el encoder.
+
+21. Establece el **Stop Time** en 5 segundos.
+22. Usa el **Manual Switch** para cambiar la entrada a un **Pulse Generator** con:
+    - Amplitud: 0.15
+    - Periodo: 1.8
+    - Ancho del pulso: 20%
+
+23. Ejecuta el modelo y aplica 0.15V por 2 segundos.
+24. Observa cuántas vueltas da la rueda de inercia.
+25. Verifica los conteos del encoder con el bloque **Display**.
+
+> Usa la vista superior en Quanser Interactive Labs para contar las revoluciones.
+
+26. Compara el número de conteos del encoder con las vueltas observadas.
+27. Repite el experimento para verificar consistencia.
+
+28. Determina cuántos conteos produce el encoder por una vuelta completa.
+29. Ajusta el bloque **Gain** para convertir conteos a grados.
+
+30. Detén el modelo usando el botón **Stop**.
+31. La tira LED volverá a ponerse roja.
+32. Cierra Quanser Interactive Labs.
+
