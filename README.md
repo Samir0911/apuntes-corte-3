@@ -87,6 +87,10 @@ Este mecanismo convierte movimiento rotacional en lineal, usando un tornillo (hu
 - Mayor precisión
 - No tiene capacidad de autobloqueo, se necesita freno externo
 
+    ![Figura 1](imagenes/tornillo.jpg)
+  
+  Figura 1. Comparacion Tornillos
+
 ---
 
 ## Backlash
@@ -268,6 +272,11 @@ En algunos casos, los sistemas inestables pueden ser identificados en **lazo abi
 - El **controlador** debe asumir el margen de error.
 
 ---
+  
+  ![Figura 2](imagenes/lazo.jpg)
+
+  
+  Figura 2. Diagramas de bloques Lazo abierto y Lazo cerrado.
 
 ## Modelado en Lazo Abierto
 
@@ -667,6 +676,10 @@ $$\ddot{y}(t) = \frac{u(t)}{M} - \frac{K}{M} y(t) - \frac{B}{M} \dot{y}(t)$$
 ---
 
 ## 3. Definición de variables de estado
+
+   ![Figura 3](imagenes/estados.jpg)
+  
+  Figura 3. Diagrama de espacio de estados
 
 Se define:
 
