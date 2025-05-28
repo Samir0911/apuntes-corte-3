@@ -1,5 +1,7 @@
 # apuntes-corte-3
 # Apuntes de Control de Movimiento – Ingeniería Mecatrónica
+## Andrey Samir Romero Buitrago 87382
+## Miguel Ángel Rueda Santana 73786
 
 ---
 
