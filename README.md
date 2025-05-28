@@ -1194,7 +1194,7 @@ qLabs.launch
 24. Observar cuántas vueltas da la rueda de inercia.
 25. Verificar los conteos del encoder con el bloque **Display**.
 
-> Usar la vista superior en Quanser Interactive Labs para contar las revoluciones.
+Usar la vista superior en Quanser Interactive Labs para contar las revoluciones.
 
 26. Comparar el número de conteos del encoder con las vueltas observadas.
 27. Repetir el experimento para verificar consistencia.
